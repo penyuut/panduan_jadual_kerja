@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Page</title>
+    <style>
+        /* General Styles */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        h1, h2, h3 {
+            color: #1E3A8A; /* Blue color for headings */
+            text-align: center;
+        }
+
+        .menu {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .menu button {
+            background-color: #3B82F6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        .menu button:hover {
+            background-color: #2563EB;
+        }
+
+        .form-container {
+            background-color: #ffffff;
+            padding: 20px;
+            margin: 30px auto;
+            width: 80%;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-container form {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .form-container label {
+            font-size: 16px;
+            margin: 10px 0 5px;
+            color: #333;
+        }
+
+        .form-container input, .form-container select, .form-container textarea {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+            border: 1px solid #d1d5db;
+            font-size: 16px;
+        }
+
+        .form-container button {
+            background-color: #1E40AF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .form-container button:hover {
+            background-color: #1D4ED8;
+        }
+
+        .table-container {
+            margin: 30px auto;
+            width: 90%;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #3B82F6;
+            color: white;
+        }
+
+        table td button {
+            margin: 2px;
+        }
+
+        .edit-btn, .delete-btn {
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .edit-btn {
+            background-color: #10B981;
+            color: white;
+        }
+
+        .delete-btn {
+            background-color: #EF4444;
+            color: white;
+        }
+
+        .edit-btn:hover {
+            background-color: #059669;
+        }
+
+        .delete-btn:hover {
+            background-color: #DC2626;
+        }
+
+        .alert {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>KEMAS KINI : BAHAGIAN I (PENDAWAIAN) </h1>
+
+    <div class="menu">
+        <button onclick="loadPart('A')">BAHAGIAN A</button>
+        <button onclick="loadPart('B')">BAHAGIAN B</button>
+        <button onclick="loadPart('C')">BAHAGIAN C</button>
+        <button onclick="loadPart('D')">BAHAGIAN D</button>
+        <button onclick="loadPart('E')">BAHAGIAN E</button>
+        <button onclick="loadPart('F')">BAHAGIAN F</button>
+        <button onclick="loadPart('G')">BAHAGIAN G</button>
+        <button onclick="loadPart('H')">BAHAGIAN H</button>
+        <button onclick="loadPart('I')">BAHAGIAN I</button>
+    </div>
+
+    <div id="content">
+        <h2>PILIH BAHAGIAN</h2>
+    </div>
+
+    <!-- Insert Data Form -->
+    <div class="form-container">
+        <h3>TAMBAH ITEM</h3>
+        <form id="insertForm">
+            <label for="bil">BIL:</label>
+            <input type="text" id="bil" name="bil" required><br>
+
+            <label for="keterangan">KETERANGAN:</label>
+            <textarea id="keterangan" name="keterangan" required></textarea><br>
+
+            <label for="bhg">BHG:</label>
+            <select id="bhg" name="bhg" required>
+                <option value="I">I</option>
+            </select><br>
+
+            <label for="unit">UNIT:</label>
+            <input type="text" id="unit" name="unit" required><br>
+
+            <label for="harga">HARGA:</label>
+           <input type="number" id="harga" name="harga" required step="0.01"><br>
+
+
+            <input type="hidden" id="part" name="part" value="A">
+            <button type="submit">Tambah Item</button>
+        </form>
+    </div>
+
+<a href="bahagian I_User.php" class="button">BAHAGIAN I (USER PAGE)</a>
+
+    <script>
+	function loadPart(part) {
+    const contentDiv = document.getElementById('content');
+    
+    // Update the hidden part field to match the selected part
+    document.getElementById('part').value = part;
+
+const descriptions = {
+                'A': 'Membekal dan memasang semua bahan mengikut spesifikasi piawai JKR secara pendawaian konduit permukaan atau terbenam dengan menggunakan kabel PVK yang berikut:- <br>(Kadar harga tidak termasuk harga konduit dan trunking keluli bergalvani)',
+
+        'B': 'Membekal dan memasang semua bahan mengikut spesifikasi piawai JKR secara pendawaian permukaan atau terbenam dengan menggunakan kabel PVK di dalam konduit / trunking keluli bergalvani l/d aksessori yang berkaitan.',
+
+        'C': 'Membekal dan memasang semua bahan mengikut spesifikasi piawai JKR secara pendawaian permukaan atau terbenam dengan menggunakan kabel PVK di dalam konduit / trunking rigid high impact UPVC l/d aksessori yang berkaitan. <br>(khusus kawasan berisiko pengaratan dan berkeperluan sahaja dengan pejabat Ketua Jurutera Elektrik)',
+
+        'D': 'Kabel Polivinil Klorida/Polivinil Klorida (PVK/PVK):- <br><br>Membekal dan memasang kabel submain , di dalam konduit keluli bergalvani, trunking keluli bergalvani  atau talam penatang kabel keluli bergalvani mengikut spesifikasi JKR yang berikut:- <br><br>(kadar harga tidak termasuk harga konduit / trunking / talam penatang).',
+
+        'E': 'Kabel Polivinil Klorida (PVK):- <br><br>Membekal dan memasang kabel submain , di dalam konduit keluli bergalvani, trunking keluli bergalvani atau talam penatang kabel keluli bergalvani mengikut spesifikasi JKR yang berikut:- <br><br>(kadar harga tidak termasuk harga konduit / trunking / talam penatang).',
+
+        'F': 'Kabel XLPE/PVK:- Membekal dan memasang kabel submain , di dalam konduit keluli bergalvani, trunking keluli bergalvani atau talam penatang kabel keluli bergalvani mengikut spesifikasi JKR yang berikut:- <br><br>(kadar harga tidak termasuk harga konduit / trunking / talam penatang).',
+
+        'G': 'Kabel Fire Resistance (FR):- <br><br>Membekal dan memasang kabel submain , di dalam konduit keluli bergalvani, trunking keluli bergalvani atau talam penatang kabel keluli bergalvani mengikut spesifikasi JKR yang berikut:- <br><br>(kadar harga tidak termasuk harga konduit / trunking / talam penatang)',
+
+        'H': 'Sistem Perlindungan Kilat dan Sistem Pembumian. <br><br>Membekal dan memasang bahagian-bahagian komponen mengikut spesifikasi JKR yang berikut:-',
+
+        'I': 'Mata Rangkaian Membekal dan memasang semua bahan mengikut spesifikasi piawai JKR (Kadar harga tidak termasuk harga patch panel)'
+            };
+
+
+    // Display the selected part and its description
+    contentDiv.innerHTML = `<h2>Bahagian ${part}</h2><p style="text-align: center;">${descriptions[part]}</p>`;
+
+
+    fetch(`fetch_data_I.php?part=${part}`)
+        .then(response => response.json())
+        .then(data => {
+            console.log('Fetched data:', data); // Add this to log the data
+            if (data.error) {
+                contentDiv.innerHTML = `<h2>Error: ${data.error}</h2>`;
+                return;
+            }
+
+            let html = `<h2>Bahagian ${part}</h2>`;
+            html += `<div class="table-container">
+                         <table>
+                             <tr>
+                                 <th>BIL</th>
+                                 <th>KETERANGAN</th>
+                                 <th>BHG</th>
+                                 <th>UNIT</th>
+                                 <th>HARGA</th>
+                                 <th>Actions</th>
+                             </tr>`;
+
+            data.forEach(row => {
+                html += `
+                    <tr>
+                        <td>${row.bil}</td>
+                        <td>${row.keterangan}</td>
+                        <td>${row.bhg}</td>
+                        <td>${row.unit}</td>
+                        <td>${row.harga}</td>
+                        <td>
+                            <button class="edit-btn" onclick="editItem(${row.id}, '${row.bil}', '${row.keterangan}', '${row.bhg}', '${row.unit}', ${row.harga})">Edit</button>
+                            <button class="delete-btn" onclick="deleteItem(${row.id})">Delete</button>
+                        </td>
+                    </tr>`;
+            });
+
+            html += `</table></div>`;
+            contentDiv.innerHTML += html;
+        })
+        .catch(error => {
+            contentDiv.innerHTML = `<h2>Error loading data</h2>`;
+            console.error('Error loading data:', error);
+        });
+}
+
+        document.getElementById('insertForm').onsubmit = function(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+
+            fetch('insert_item_I.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                alert(data);  // Show a success message
+                // After successful insert, reload Part A (or the relevant part)
+                loadPart(document.getElementById('part').value);
+                event.target.reset();  // Reset the form after submission
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Error inserting data.');
+            });
+        };
+
+        function editItem(id, bil, keterangan, bhg, unit, harga) {
+            document.getElementById('bil').value = bil;
+            document.getElementById('keterangan').value = keterangan;
+            document.getElementById('bhg').value = bhg;
+            document.getElementById('unit').value = unit;
+            document.getElementById('harga').value = harga;
+            document.getElementById('part').value = 'A';
+
+            const form = document.getElementById('insertForm');
+            form.onsubmit = function(event) {
+                event.preventDefault();
+                updateItem(id);
+            };
+        }
+
+        function updateItem(id) {
+            const formData = new FormData(document.getElementById('insertForm'));
+            formData.append('id', id);
+
+            fetch('update_item_I.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                alert(data);
+                loadPart('A');
+                document.getElementById('insertForm').reset();
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Error updating item.');
+            });
+        }
+
+        function deleteItem(id) {
+            if (confirm('Are you sure you want to delete this item?')) {
+                fetch('delete_item_I.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: id })
+                })
+                .then(response => response.text())
+                .then(data => {
+                    alert(data);
+                    loadPart('A');
+                })
+                .catch(error => {
+                    console.error(error);
+                    alert('Error deleting item.');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,425 @@
+<?php
+session_start();
+
+$conn = new mysqli('localhost', 'root', '', 'jadual');
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+
+
+if (isset($_POST['add_approved_item'])) {
+    $item_name = $_POST['item_name'];
+    $price = $_POST['price'];
+    $quantity = $_POST['quantity'];
+
+    // Prepare and bind
+    $stmt = $conn->prepare("INSERT INTO approved_items (item_name, price, quantity) VALUES (?, ?, ?)");
+    $stmt->bind_param("sdi", $item_name, $price, $quantity);  // s = string, d = double, i = integer
+
+    if ($stmt->execute()) {
+        echo "<script>alert('Item added successfully.');</script>";
+    } else {
+        echo "Error: " . $stmt->error;
+    }
+
+    $stmt->close();
+}
+
+
+// Handle item removal
+if (isset($_POST['remove_approved_item'])) {
+    $item_id = $_POST['item_id'];
+    $remove_sql = "DELETE FROM approved_items WHERE id = '$item_id'";
+    if ($conn->query($remove_sql) === TRUE) {
+        echo "<script>alert('Approved item removed successfully!');</script>";
+    } else {
+        echo "Error removing approved item: " . $conn->error;
+    }
+}
+
+// Fetch approved items from the database
+$approved_items_result = $conn->query("SELECT * FROM approved_items");
+$approved_items = $approved_items_result->fetch_all(MYSQLI_ASSOC);
+
+// Initialize totals
+$totalAmount = 0;
+$totalApprovedAmount = 0;
+
+// Calculate total amount from the cart
+if (!empty($_SESSION['cart'])) {
+    foreach ($_SESSION['cart'] as $item) {
+        $totalAmount += $item['harga'] * $item['kuantiti'];
+    }
+}
+
+// Calculate total approved amount
+foreach ($approved_items as $item) {
+    $totalApprovedAmount += $item['price'] * $item['quantity'];
+}
+
+// Unified Tax Calculation
+$taxRate = 0;
+$vehicleTaxRate = 0;
+$taxRates = [
+    'kangar' => [
+        'lessThan16' => 0.04,
+        'between16And32' => 0.09,
+        'between32And48' => 0.12,
+        'moreThan48' => 0.14
+    ],
+    'kota setar' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+];
+
+
+// Handle tax and vehicle type submission
+if (isset($_POST['submit_lokasi'])) {
+    $distance = $_POST['jarak'];
+    $district = strtolower($_POST['daerah']);
+    $vehicleType = $_POST['vehicle_type'];
+
+    // Determine tax rate based on distance
+    if (isset($taxRates[$district])) {
+        if ($distance < 16) {
+            $taxRate = $taxRates[$district]['lessThan16'];
+        } elseif ($distance <= 32) {
+            $taxRate = $taxRates[$district]['between16And32'];
+        } elseif ($distance <= 48) {
+            $taxRate = $taxRates[$district]['between32And48'];
+        } else {
+            $taxRate = $taxRates[$district]['moreThan48'];
+        }
+    }
+
+    // Determine vehicle tax rate
+    if ($vehicleType === 'kenderaan_air') {
+        $vehicleTaxRate = 0.05; // 5%
+    } elseif ($vehicleType === 'kenderaan_darat') {
+        $vehicleTaxRate = 0.02; // 2%
+    }
+}
+
+// Calculate the taxes
+$totalAmountIncludingApprovedItems = $totalAmount + $totalApprovedAmount;
+$taxAmount = $totalAmountIncludingApprovedItems * $taxRate;
+$vehicleTaxAmount = $totalAmountIncludingApprovedItems * $vehicleTaxRate;
+$totalTax = $taxAmount + $vehicleTaxAmount;
+
+// Calculate Jumlah Nilai Kerja
+$jumlahNilaiKerja = $totalAmountIncludingApprovedItems;
+
+// Calculate Jumlah Besar (Jumlah Nilai Kerja + Total Cukai)
+$jumlahBesar = $jumlahNilaiKerja + $totalTax;
+
+// Apply condition to include/exclude tax based on Jumlah Nilai Kerja
+$CukaiMoreRM1000 = 0; // Initialize as 0
+$taxAmountLessThan1000 = 0;
+
+if ($jumlahNilaiKerja < 1000) {
+    // If Jumlah Nilai Kerja < RM 1000, tax is 20%
+    $taxAmountLessThan1000 = $jumlahBesar * 0.20; // 20% tax applied
+    $CukaiMoreRM1000 = $jumlahBesar + $taxAmountLessThan1000; // Jumlah Nilai Kerja + 20% tax
+} else {
+    // If Jumlah Nilai Kerja >= RM 1000, tax is not included
+    $CukaiMoreRM1000 = $jumlahBesar; // No tax added
+}
+
+
+
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slip Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1,
+        h2,
+        h3 {
+            color: #1E3A8A;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table th,
+        table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #3B82F6;
+            color: white;
+        }
+
+        .form-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-top: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+        }
+    </style>
+    <script>
+        const daerahOptions = {
+            pahang: ['Bentong', 'Temerloh', 'Raub', 'Bera', 'Maran', 'Kuantan', 'Cameron Highlands', 'Kuala Lipis', 'Pekan', 'Jerantut', 'Rompin', 'Ulu Tembeling (Taman Negara)', 'Pulau Tioman'],
+            johor: ['Johor Bahru', 'Pontian', 'Segamat', 'Kluang', 'Batu Pahat', 'Muar', 'Kota Tinggi', 'Mersing', 'Tangkak', 'Kulaijaya', 'Pulau Sibu dan Pulau Tinggi', 'Pulau Aur dan Pulau Pemanggil'],
+            selangor: ['Semua daerah kecuali Sabak Bernam dan Kuala Selangor', 'Sabak Bernam dan Kuala Selangor', 'Pulau Ketam'],
+            negeri_sembilan: ['Seremban', 'Kuala Pilah', 'Port Dickson', 'Tampin', 'Rembau', 'Kuala Klawang', 'Bandar Baru Serting'],
+            melaka: ['Bandar Melaka'],
+            kelantan: ['Kota Bahru', 'Bachok', 'Pasir Puteh', 'Pasir Mas', 'Tumpat', 'Tanah Merah', 'Machang', 'Jeli', 'Kuala Krai', 'Gua Musang'],
+            kedah: ['Kota Setar', 'Sungai Petani', 'Kulim', 'Baling', 'Padang Terap', 'Yan', 'Sik', 'Bandar Baharu', 'Pendang', 'Langkawi'],
+            pulau_pinang: ['Pulau Pinang', 'Butterworth', 'Bukit Bendera', 'Pulau-pulau'],
+            perak: ['Kinta', 'Kuala Kangsar', 'Larut & Matang', 'Kerian', 'Batang Padang', 'Hilir Perak', 'Manjung', 'Perak Tengah', 'Hulu Perak', 'Pos Orang Asli', 'Pulau-pulau (Pulau Pangkor)'],
+            terengganu: ['Kuala Terengganu', 'Dungun', 'Kemaman', 'Besut', 'Hulu Terengganu', 'Setiu', 'Marang', 'Pulau-Pulau'],
+            labuan: ['Labuan', 'Pulau-pulau'],
+            putrajaya: ['Putrajaya'],
+            kuala_lumpur: ['Kuala Lumpur'],
+            perlis: ['Kangar'],
+            kesedar: ['Kesedar'],
+            ketengah: ['Ketengah']
+        };
+
+	function toggleApprovalForm(show) {
+    var approvalForm = document.getElementById('approvalForm');
+    if (show) {
+        approvalForm.style.display = 'block';
+    } else {
+        approvalForm.style.display = 'none';
+    }
+}
+
+
+        function updateDistricts() {
+            const negeriSelect = document.getElementById('negeri');
+            const daerahSelect = document.getElementById('daerah');
+            const negeri = negeriSelect.value;
+
+            daerahSelect.innerHTML = '';
+            if (daerahOptions[negeri]) {
+                daerahOptions[negeri].forEach(daerah => {
+                    const option = document.createElement('option');
+                    option.value = daerah.toLowerCase();
+                    option.textContent = daerah;
+                    daerahSelect.appendChild(option);
+                });
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <div>
+        <h1>Slip Page</h1>
+
+        <!-- Items in Cart -->
+        <div class="form-section">
+            <h3>Items in Cart</h3>
+            <table>
+                <tr>
+                    <th>No</th>
+                    <th>Description</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Total</th>
+                </tr>
+                <?php if (!empty($_SESSION['cart'])): ?>
+                    <?php foreach ($_SESSION['cart'] as $index => $item): ?>
+                        <tr>
+                            <td><?= $index + 1 ?></td>
+                            <td><?= htmlspecialchars($item['keterangan']) ?></td>
+                            <td>RM <?= number_format($item['harga'], 2) ?></td>
+                            <td><?= htmlspecialchars($item['kuantiti']) ?></td>
+                            <td>RM <?= number_format($item['harga'] * $item['kuantiti'], 2) ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5">No items in the cart</td>
+                    </tr>
+                <?php endif; ?>
+            </table>
+            <p><strong>Total: RM <?= number_format($totalAmount, 2) ?></strong></p>
+        </div>
+
+	<div class="form-section">
+    <h2>ITEM HARGA PERSETUJUAN</h2>
+    <form method="post">
+        <p><b>Ada Item Persetujuan?</b></p>
+        <input type="radio" id="ada" name="item_approval" value="ada" onclick="toggleApprovalForm(true)">
+        <label for="ada">Ada</label>
+        <input type="radio" id="tiada" name="item_approval" value="tiada" onclick="toggleApprovalForm(false)">
+        <label for="tiada">Tiada</label>
+
+        <!-- Form for adding approved items (hidden by default) -->
+        <div id="approvalForm" style="display: none;">
+            <h3>Add Approved Item</h3>
+            <label for="item_name">Item:</label>
+            <input type="text" id="item_name" name="item_name" required>
+            <br>
+            <label for="price">Harga:</label>
+            <input type="number" id="price" name="price" required step="0.01">
+            <br>
+            <label for="quantity">Kuantiti:</label>
+            <input type="number" id="quantity" name="quantity" required>
+            <br><br>
+            <button type="submit" name="add_approved_item">Add New Item</button>
+        </div>
+    </form>
+
+        <!-- Approved Items -->
+        <div class="form-section">
+            <h3>Approved Items</h3>
+            <table>
+                <tr>
+                    <th>No</th>
+                    <th>Item Name</th>
+                    <th>Price</th>
+                    <th>Quantity</th>
+                    <th>Action</th>
+                </tr>
+                <?php if (count($approved_items) > 0): ?>
+                    <?php foreach ($approved_items as $index => $item): ?>
+                        <tr>
+                            <td><?= $index + 1 ?></td>
+                            <td><?= htmlspecialchars($item['item_name']) ?></td>
+                            <td>RM <?= number_format($item['price'], 2) ?></td>
+                            <td><?= htmlspecialchars($item['quantity']) ?></td>
+                            <td>
+                                <form method="post">
+                                <input type="hidden" name="item_id" value="<?php echo $item['id']; ?>">
+                                    <button type="submit" name="remove_approved_item">Remove</button>
+                                </form>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="5">No approved items</td>
+                    </tr>
+                <?php endif; ?>
+            </table>
+            <p><strong>Total Approved Amount: RM <?= number_format($totalApprovedAmount, 2) ?></strong></p>
+        </div>
+
+        <h1>Lokasi dan Pengiraan Cukai</h1>
+
+        <!-- Lokasi Form -->
+        <div class="form-section">
+            <form method="post">
+                <label>Projek:</label>
+                <input type="text" name="projek" required><br>
+
+                <label>Jarak (km):</label>
+                <input type="number" name="jarak" required><br>
+
+                <label for="negeri">Negeri:</label>
+                <select name="negeri" id="negeri" onchange="updateDistricts()" required>
+                    <option value="pahang">JKR Elektrik Pahang</option>
+                    <option value="johor">JKR Elektrik Johor</option>
+                    <option value="selangor">JKR Elektrik Selangor</option>
+                    <option value="pahang">JKR Elektrik Pahang (Pejabat pengeluar inden)</option>
+                    <option value="johor">JKR Elektrik Johor (Pejabat pengeluar inden)</option>
+                    <option value="selangor">JKR Elektrik Selangor (Pejabat pengeluar inden)</option>
+                    <option value="terengganu">JKR Elektrik Terengganu (Pejabat pengeluar inden)</option>
+                    <option value="negeri_sembilan">JKR Elektrik Negeri Sembilan (Pejabat pengeluar inden)</option>
+                    <option value="kelantan">JKR Elektrik Kelantan (Pejabat pengeluar inden)</option>
+                    <option value="kedah">JKR Elektrik Kedah (Pejabat pengeluar inden)</option>
+                    <option value="pulau pinang">JKR Elektrik Pulau Pinang (Pejabat pengeluar inden)</option>
+                    <option value="melaka">JKR Elektrik Melaka (Pejabat pengeluar inden)</option>
+                    <option value="perlis">JKR Elektrik Perlis (Pejabat pengeluar inden)</option>
+                    <option value="putrajaya">JKR Elektrik Wilayah Persekutuan Putrajaya (Pejabat pengeluar inden)
+                    </option>
+                    <option value="kuala_lumpur">JKR Elektrik Wilayah Persekutuan Kuala Lumpur (Pejabat pengeluar inden)
+                    </option>
+                    <option value="labuan">JKR Elektrik Wilayah Persekutuan Labuan (Pejabat pengeluar inden)</option>
+                    <option value="kesedar">JKR Elektrik KESEDAR (Pejabat pengeluar inden)</option>
+                    <option value="ketengah">JKR Elektrik KETENGAH (Pejabat pengeluar inden)</option>
+                    <!-- Add other negeri here -->
+                </select><br>
+
+                <label for="daerah">Daerah:</label>
+                <select name="daerah" id="daerah" required>
+                    <option value="">-- Pilih Daerah --</option>
+                </select><br>
+
+                <label>Kenderaan:</label><br>
+                <input type="radio" name="vehicle_type" value="kenderaan_darat" required>Tambahan peratusan sebanyak 2%
+                lagi dari JKKE hendaklah dibuat
+                sekiranya jalan ke sesuatu tempat kerja hanya boleh dilalui oleh
+                kenderaan darat berjentera beroda dua (two-wheel vehicle) atau
+                kenderaan berjentera yang mempunyai pacuan empat roda (four-wheel
+                drive vehicle).<br>
+
+                <br> <input type="radio" name="vehicle_type" value="kenderaan_air">Tambahan peratusan sebanyak 5% lagi
+                dari JKKE hendaklah dibuat
+                sekiranya jalan ke sesuatu tempat kerja hanya boleh dilalui menggunakan
+                kenderaan air dengan mengharungi sungai, tasik atau laut, tanpa
+                jambatan.<br>
+
+
+                <button type="submit" name="submit_lokasi">Calculate Tax</button>
+            </form>
+        </div>
+
+          <!-- Tax Calculation Results -->
+        <?php if (isset($_POST['submit_lokasi'])): ?>
+            <div class="form-section">
+                <h3>Keputusan Pengiraan Cukai</h3>
+                <p><strong>Negeri:</strong> <?= htmlspecialchars($_POST['negeri']) ?></p>
+                <p><strong>Daerah:</strong> <?= htmlspecialchars($_POST['daerah']) ?></p>
+                <p><strong>Jarak:</strong> <?= htmlspecialchars($_POST['jarak']) ?> km</p>
+                <p><strong>Jenis Kenderaan:</strong> <?= htmlspecialchars($_POST['vehicle_type']) ?></p>
+
+                <h4>Cukai</h4>
+                <p><strong>Kadar Cukai:</strong> <?= number_format($taxRate * 100, 2) ?>%</p>
+                <p><strong>Amaun Cukai:</strong> RM <?= number_format($taxAmount, 2) ?></p>
+
+                <h4>Cukai Kenderaan</h4>
+                <p><strong>Kadar Cukai Kenderaan:</strong> <?= number_format($vehicleTaxRate * 100, 2) ?>%</p>
+                <p><strong>Amaun Cukai Kenderaan:</strong> RM <?= number_format($vehicleTaxAmount, 2) ?></p>
+
+                <h4>Jumlah Nilai Kerja</h4>
+                <p><strong>Jumlah Nilai Kerja:</strong> RM <?= number_format($jumlahNilaiKerja, 2) ?></p>
+
+                <h3>Jumlah Besar: RM <?= number_format($jumlahBesar, 2) ?></h3>
+
+
+                <h3>Jumlah Cukai Kurang RM 1000: RM <?= number_format($CukaiMoreRM1000, 2) ?></h3>
+    		 <h3>Amaun Cukai (Kurang RM 1000): RM <?= number_format($taxAmountLessThan1000, 2) ?></h3>
+
+		<?php if ($jumlahNilaiKerja < 1000): ?>
+                    <h3>Had maksimum bayaran kepada Kontraktor: RM 1,000.00</h3>
+                    <h3>Bayaran Muktamad: RM 1,000.00</h3>
+                <?php else: ?>
+                    <h3>Bayaran Muktamad: RM <?= number_format($CukaiMoreRM1000, 2) ?></h3>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
+
+    </div>
+</body>
+
+</html>

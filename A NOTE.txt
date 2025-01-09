@@ -1,0 +1,12 @@
+NOTE 
+
+the new one we use : 
+
+fetch_data 
+insert_data 
+update_item
+delete_item
+
+database : 
+bahagian_ii_a
+cart

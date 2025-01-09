@@ -1,0 +1,421 @@
+<?php
+session_start();
+
+$conn = new mysqli('localhost', 'root', '', 'jadual');
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Handle form submission for adding approved items
+if (isset($_POST['add_approved_item'])) {
+    $item_name = $_POST['item_name'];
+    $price = $_POST['price'];
+    $quantity = $_POST['quantity'];
+    $sql = "INSERT INTO approved_items (item_name, price, quantity) VALUES ('$item_name', '$price', '$quantity')";
+    if ($conn->query($sql) === TRUE) {
+        echo "Item added successfully.";
+    } else {
+        echo "Error: " . $conn->error;
+    }
+}
+
+// Handle item removal
+if (isset($_POST['remove_approved_item'])) {
+    $item_id = $_POST['item_id'];
+    $remove_sql = "DELETE FROM approved_items WHERE id = '$item_id'";
+    if ($conn->query($remove_sql) === TRUE) {
+        echo "<script>alert('Approved item removed successfully!');</script>";
+    } else {
+        echo "Error removing approved item: " . $conn->error;
+    }
+}
+
+// Fetch approved items from the database
+$approved_items_result = $conn->query("SELECT * FROM approved_items");
+
+// Initialize totals
+$totalAmount = 0;
+$totalApprovedAmount = 0;
+
+
+
+?>
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Slip Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        h1, h2, h3 {
+            color: #1E3A8A;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #3B82F6;
+            color: white;
+        }
+
+        .form-section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-top: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+        }
+    </style>
+    <script>
+        const daerahOptions = {
+    pahang: ['Bentong', 'Temerloh', 'Raub', 'Bera', 'Maran', 'Kuantan', 'Cameron Highlands', 'Kuala Lipis', 'Pekan', 'Jerantut', 'Rompin', 'Ulu Tembeling (Taman Negara)', 'Pulau Tioman'],
+    johor: ['Johor Bahru', 'Pontian', 'Segamat', 'Kluang', 'Batu Pahat', 'Muar', 'Kota Tinggi', 'Mersing', 'Tangkak', 'Kulaijaya', 'Pulau Sibu dan Pulau Tinggi', 'Pulau Aur dan Pulau Pemanggil'],
+    selangor: ['Semua daerah kecuali Sabak Bernam dan Kuala Selangor', 'Sabak Bernam dan Kuala Selangor', 'Pulau Ketam'],
+    negeri_sembilan: ['Seremban', 'Kuala Pilah', 'Port Dickson', 'Tampin', 'Rembau', 'Kuala Klawang', 'Bandar Baru Serting'],
+    melaka: ['Bandar Melaka'],
+    kelantan: ['Kota Bahru', 'Bachok', 'Pasir Puteh', 'Pasir Mas', 'Tumpat', 'Tanah Merah', 'Machang', 'Jeli', 'Kuala Krai', 'Gua Musang'],
+    kedah: ['Kota Setar', 'Sungai Petani', 'Kulim', 'Baling', 'Padang Terap', 'Yan', 'Sik', 'Bandar Baharu', 'Pendang', 'Langkawi'],
+    pulau_pinang: ['Pulau Pinang', 'Butterworth', 'Bukit Bendera', 'Pulau-pulau'],
+    perak: ['Kinta', 'Kuala Kangsar', 'Larut & Matang', 'Kerian', 'Batang Padang', 'Hilir Perak', 'Manjung', 'Perak Tengah', 'Hulu Perak', 'Pos Orang Asli', 'Pulau-pulau (Pulau Pangkor)'],
+    terengganu: ['Kuala Terengganu', 'Dungun', 'Kemaman', 'Besut', 'Hulu Terengganu', 'Setiu', 'Marang', 'Pulau-Pulau'],
+    labuan: ['Labuan', 'Pulau-pulau'],
+    putrajaya: ['Putrajaya'],
+    kuala_lumpur: ['Kuala Lumpur'],
+    perlis: ['Kangar'],
+    kesedar: ['Kesedar'],
+    ketengah: ['Ketengah']
+};
+
+
+        function updateDistricts() {
+    const negeri = document.getElementById("jalan").value;
+    const districtSelect = document.getElementById("district");
+    districtSelect.innerHTML = '<option value="">Sila pilih daerah</option>';
+
+    if (daerahOptions[negeri]) {
+        daerahOptions[negeri].forEach(daerah => {
+            const option = document.createElement("option");
+            option.value = daerah;
+            option.textContent = daerah;
+            districtSelect.appendChild(option);
+        });
+    }
+}
+    </script>
+</head>
+
+<body>
+    <div>
+        <h1>Slip Page</h1>
+
+        <!-- Items in Cart -->
+        <div class="form-section">
+            <h3>Items in Cart</h3>
+            <table>
+                <tr>
+                    <th>No</th>
+                    <th>Keterangan</th>
+                    <th>BHG</th>
+                    <th>Bil</th>
+                    <th>RM</th>
+                    <th>Kuantiti</th>
+                    <th>Harga</th>
+                </tr>
+                <?php
+                if (!empty($_SESSION['cart'])) {
+                    foreach ($_SESSION['cart'] as $index => $item) {
+                        $totalAmount += $item['harga'] * $item['kuantiti'];
+                        echo "<tr>
+                                <td>" . ($index + 1) . "</td>
+                                <td>" . $item['keterangan'] . "</td>
+                                <td>" . $item['bhg'] . "</td>
+                                <td>" . $item['bil'] . "</td>
+                                <td>" . $item['harga'] . "</td>
+                                <td>" . $item['kuantiti'] . "</td>
+                                <td>" . ($item['harga'] * $item['kuantiti']) . "</td>
+                            </tr>";
+                    }
+                } else {
+                    echo "<tr><td colspan='7'>No items in the cart</td></tr>";
+                }
+                ?>
+            </table>
+            <p><strong>Total Items in Cart:</strong> RM <?php echo number_format($totalAmount, 2); ?></p>
+        </div>
+
+        <!-- Approved Items -->
+        <div class="form-section">
+            <h2>ITEM HARGA PERSETUJUAN</h2>
+            <form method="post">
+                <h3>Add Approved Item</h3>
+                <label>Item:</label> <input type="text" name="item_name" required><br>
+                <label>Harga:</label> <input type="number" name="price" step="0.01" required><br>
+                <label>Kuantiti:</label> <input type="number" name="quantity" required><br><br>
+                <button type="submit" name="add_approved_item">Add Item</button>
+            </form>
+
+            <h3>Approved Items List</h3>
+            <table>
+                <tr>
+                    <th>No</th>
+                    <th>Item</th>
+                    <th>Harga</th>
+                    <th>Kuantiti</th>
+                    <th>Total</th>
+                    <th>Action</th>
+                </tr>
+                <?php
+                if ($approved_items_result->num_rows > 0) {
+                    $no = 1;
+                    while ($row = $approved_items_result->fetch_assoc()) {
+                        $total_harga_approved = $row['quantity'] * $row['price'];
+                        $totalApprovedAmount += $total_harga_approved;
+                        echo "<tr>
+                                <td>{$no}</td>
+                                <td>{$row['item_name']}</td>
+                                <td>" . number_format($row['price'], 2) . "</td>
+                                <td>{$row['quantity']}</td>
+                                <td>" . number_format($total_harga_approved, 2) . "</td>
+                                <td>
+                                    <form method='post'>
+                                        <input type='hidden' name='item_id' value='{$row['id']}'>
+                                        <button type='submit' name='remove_approved_item'>Remove</button>
+                                    </form>
+                                </td>
+                            </tr>";
+                        $no++;
+                    }
+                } else {
+                    echo "<tr><td colspan='6'>No approved items</td></tr>";
+                }
+                ?>
+            </table>
+            <p><strong>Total Approved Items:</strong> RM <?php echo number_format($totalApprovedAmount, 2); ?></p>
+        </div>
+
+        <!-- Total Summary -->
+        <div class="form-section">
+            <p><strong>Total All Items:</strong> RM <?php echo number_format($totalAmount + $totalApprovedAmount, 2); ?></p>
+        </div>
+
+        <!-- Location Form -->
+        <div class="form-section">
+            <h2>Lokasi</h2>
+            <form method="post">
+                <label>Projek:</label> <input type="text" name="projek" required><br>
+                <label>Jarak (km):</label> <input type="number" name="jarak" required><br>
+                
+		<label>Negeri:</label>
+               <form method="post">
+    <label for="jalan">Jalan:</label>
+    <select name="jalan" id="jalan" onchange="updateDistricts()" required>
+                <option value="pahang">JKR Elektrik Pahang</option>
+                <option value="johor">JKR Elektrik Johor</option>
+                <option value="selangor">JKR Elektrik Selangor</option>
+                <option value="pahang">JKR Elektrik Pahang (Pejabat pengeluar inden)</option>
+                <option value="johor">JKR Elektrik Johor (Pejabat pengeluar inden)</option>
+                <option value="selangor">JKR Elektrik Selangor (Pejabat pengeluar inden)</option>
+                <option value="terengganu">JKR Elektrik Terengganu (Pejabat pengeluar inden)</option>
+                <option value="negeri_sembilan">JKR Elektrik Negeri Sembilan (Pejabat pengeluar inden)</option>
+                <option value="kelantan">JKR Elektrik Kelantan (Pejabat pengeluar inden)</option>
+                <option value="kedah">JKR Elektrik Kedah (Pejabat pengeluar inden)</option>
+                <option value="pulau pinang">JKR Elektrik Pulau Pinang (Pejabat pengeluar inden)</option>
+                <option value="melaka">JKR Elektrik Melaka (Pejabat pengeluar inden)</option>
+                <option value="perlis">JKR Elektrik Perlis (Pejabat pengeluar inden)</option>
+                <option value="putrajaya">JKR Elektrik Wilayah Persekutuan Putrajaya (Pejabat pengeluar inden)</option>
+                <option value="kuala_lumpur">JKR Elektrik Wilayah Persekutuan Kuala Lumpur (Pejabat pengeluar inden)
+                </option>
+                <option value="labuan">JKR Elektrik Wilayah Persekutuan Labuan (Pejabat pengeluar inden)</option>
+                <option value="kesedar">JKR Elektrik KESEDAR (Pejabat pengeluar inden)</option>
+                <option value="ketengah">JKR Elektrik KETENGAH (Pejabat pengeluar inden)</option>
+            </select>
+<br>
+                <label>Daerah:</label>
+                <select id="district" name="district">
+                    <option value="">Sila pilih daerah</option>
+                </select><br><br>
+                <button type="submit" name="submit_lokasi">Calculate Tax</button>
+            </form>
+        </div>
+
+      
+
+        <?php
+        // Tax Rates Configuration
+       $taxRates = [
+    'kangar' => [
+        'lessThan16' => 0.04,
+        'between16And32' => 0.09,
+        'between32And48' => 0.12,
+        'moreThan48' => 0.14
+    ],
+    'kota setar' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'sungai petani' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'kulim' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'baling' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'padang terap' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'yan' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'sik' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'bandar baharu' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'pendang' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'langkawi' => [
+        'lessThan16' => 0.25,
+        'between16And32' => 0.0,
+        'between32And48' => 0.0,
+        'moreThan48' => 0.0
+    ],
+    'pulau pinang' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'butterworth' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'bukit bendera' => [
+        'lessThan16' => 0.15,
+        'between16And32' => 0.0,
+        'between32And48' => 0.0,
+        'moreThan48' => 0.0
+    ],
+    'pulau-pulau' => [
+        'lessThan16' => 0.20,
+        'between16And32' => 0.0,
+        'between32And48' => 0.0,
+        'moreThan48' => 0.0
+    ],
+    'kinta' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    'kuala kangsar' => [
+        'lessThan16' => 0.03,
+        'between16And32' => 0.08,
+        'between32And48' => 0.11,
+        'moreThan48' => 0.13
+    ],
+    // Continue with the rest of the data in the same format...
+];
+
+// Handle tax calculation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_lokasi'])) {
+    $district = isset($_POST['district']) ? strtolower($_POST['district']) : '';
+    $amount = $totalAmount + $totalApprovedAmount;
+
+    // Check if the district exists in the taxRates array
+    if (!empty($district) && isset($taxRates[$district])) {
+        // Retrieve the tax rates for the selected district
+        $rates = $taxRates[$district];
+        $taxRate = 0;
+
+        // Determine the tax rate based on the amount
+        if ($amount < 16) {
+            $taxRate = $rates['lessThan16'];
+        } elseif ($amount >= 16 && $amount <= 32) {
+            $taxRate = $rates['between16And32'];
+        } elseif ($amount > 32 && $amount <= 48) {
+            $taxRate = $rates['between32And48'];
+        } else {
+            $taxRate = $rates['moreThan48'];
+        }
+
+        // Calculate the tax
+        $taxAmount = $amount * $taxRate;
+        $totalAfterTax = $amount + $taxAmount;
+
+        echo "<p><strong>Tax Percentage:</strong> " . ($taxRate * 100) . "%</p>";
+        echo "<p><strong>Tax Amount:</strong> RM " . number_format($taxAmount, 2) . "</p>";
+        echo "<p><strong>Total After Tax:</strong> RM " . number_format($totalAfterTax, 2) . "</p>";
+    } else {
+        echo "<p style='color: red;'>Please select a valid district.</p>";
+    }
+}
+    
+
+
+        $district = isset($_POST['district']) ? $_POST['district'] : '';
+        if (array_key_exists($district, $taxRates)) {
+            echo "<p>Tax Rates for $district:</p><ul>";
+            foreach ($taxRates[$district] as $range => $rate) {
+                echo "<li>$range: " . ($rate * 100) . "%</li>";
+            }
+            echo "</ul>";
+        }
+        ?>
+    </div>
+</body>
+</html>
+
+

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User View</title>
+    <style>
+        /* Styling for the user page */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        h1, h2 {
+            color: #1E3A8A;
+            text-align: center;
+        }
+
+        .table-container {
+            margin: 30px auto;
+            width: 90%;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        table th, table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        table th {
+            background-color: #3B82F6;
+            color: white;
+        }
+
+        table td {
+            background-color: #f9fafb;
+        }
+
+        .button {
+            background-color: #1E3A8A;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .button:hover {
+            background-color: #2563EB;
+        }
+
+        .cart-container {
+            margin-top: 40px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .cart-container h3 {
+            text-align: center;
+            color: #1E3A8A;
+        }
+    </style>
+</head>
+<body>
+    <h1>User Page</h1>
+
+    <h2>All Parts Items</h2>
+
+    <div id="content">
+        <!-- All part data will be displayed here -->
+    </div>
+
+    <div class="cart-container">
+        <h3>Selected Items</h3>
+        <table id="cartTable">
+            <tr>
+                <th>No</th>
+                <th>Keterangan</th>
+                <th>BHG</th>
+                <th>Bil</th>
+                <th>RM</th>
+                <th>Kuantiti</th>
+                <th>Harga</th>
+                <th>Action</th>
+            </tr>
+        </table>
+        <p><strong>Jumlah Keseluruhan: </strong> RM <span id="totalAmount">0.00</span></p>
+    </div>
+
+<a href="slip_page.php" class="button">Go to User Page</a>
+
+    <script>
+        // Store selected items
+        let cart = [];
+        let totalAmount = 0;
+
+        // Function to fetch data for all parts (A to I)
+        function loadAllParts() {
+            const contentDiv = document.getElementById('content');
+            let html = '';
+
+            // Loop through all parts A to I and fetch data for each part
+            const parts = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'];
+            parts.forEach(part => {
+                fetch(`fetch_data.php?part=${part}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.error) {
+                            contentDiv.innerHTML = `<h2>Error: ${data.error}</h2>`;
+                            return;
+                        }
+
+                        html += `<h3>Part ${part}</h3>`;
+                        html += `<div class="table-container">
+                                    <table>
+                                        <tr>
+                                            <th>BIL</th>
+                                            <th>KETERANGAN</th>
+                                            <th>BHG</th>
+                                            <th>UNIT</th>
+                                            <th>HARGA 2023</th>
+                                            <th>Quantity</th>
+                                            <th>Action</th>
+                                        </tr>`;
+
+                        data.forEach(row => {
+                            html += 
+                                `<tr>
+                                    <td>${row.bil}</td>
+                                    <td>${row.keterangan}</td>
+                                    <td>${row.bhg}</td>
+                                    <td>${row.unit}</td>
+                                    <td>${row.harga}</td>
+                                    <td>
+                                        <input type="number" id="quantity_${row.bil}" value="1" min="1" />
+                                    </td>
+                                    <td>
+                                        <button class="button" onclick="addToCart(${JSON.stringify(row).replace(/"/g, '&quot;')})">Add to Cart</button>
+                                    </td>
+                                </tr>`;
+                        });
+
+                        html += `</table></div>`;
+                        contentDiv.innerHTML = html; // Append the HTML dynamically to the content div
+                    })
+                    .catch(error => {
+                        console.error(error);
+                        contentDiv.innerHTML = `<h2>Error loading data</h2>`;
+                    });
+            });
+        }
+
+        // Add item to cart
+        function addToCart(item) {
+            // Get the quantity from the input field
+            const quantity = document.getElementById(`quantity_${item.bil}`).value;
+            
+            // Ensure quantity is a number and greater than 0
+            if (quantity <= 0 || isNaN(quantity)) {
+                alert("Please enter a valid quantity greater than 0.");
+                return;
+            }
+
+            const existingItem = cart.find(cartItem => cartItem.bil === item.bil);
+            if (existingItem) {
+                // Update quantity if item already in cart
+                existingItem.kuantiti += parseInt(quantity);
+                existingItem.hargaTotal = existingItem.harga * existingItem.kuantiti;
+            } else {
+                // Add new item to cart
+                item.kuantiti = parseInt(quantity);
+                item.hargaTotal = item.harga * item.kuantiti;
+                cart.push(item);
+            }
+
+            updateCartTable();
+        }
+
+        // Remove item from cart
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            updateCartTable();
+        }
+
+        // Update the cart table and total amount
+       function updateCartTable() {
+    const cartTable = document.getElementById('cartTable');
+    const totalSpan = document.getElementById('totalAmount');
+    let cartHtml = `<tr>
+                        <th>No</th>
+                        <th>Keterangan</th>
+                        <th>BHG</th>
+                        <th>Bil</th>
+                        <th>RM</th>
+                        <th>Kuantiti</th>
+                        <th>Harga</th>
+                        <th>Action</th>
+                    </tr>`;
+
+    totalAmount = 0;
+
+    cart.forEach((item, index) => {
+        cartHtml += `<tr>
+                        <td>${index + 1}</td>
+                        <td>${item.keterangan}</td>
+                        <td>${item.bhg}</td>
+                        <td>${item.bil}</td>
+                        <td>${item.harga}</td>
+                        <td>${item.kuantiti}</td>
+                        <td>${item.hargaTotal}</td>
+                        <td><button class="button" onclick="removeFromCart(${index})">Remove</button></td>
+                    </tr>`;
+
+        totalAmount += item.hargaTotal;
+    });
+
+    cartTable.innerHTML = cartHtml;
+    totalSpan.innerText = totalAmount.toFixed(2);
+
+    // Save cart to local storage
+    localStorage.setItem('cart', JSON.stringify(cart));
+}
+
+        // Load all parts data when the page loads
+        window.onload = loadAllParts;
+    </script>
+</body>
+</html>
